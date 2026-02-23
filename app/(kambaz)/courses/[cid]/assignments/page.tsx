@@ -1,4 +1,5 @@
 "use client";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Button,
@@ -14,6 +15,7 @@ import { IoEllipsisVertical } from "react-icons/io5";
 import { FaSearch } from "react-icons/fa";
 import { LiaBookSolid } from "react-icons/lia";
 import GreenCheckmark from "../modules/GreenCheckmark";
+import { assignments } from "../../../database";
 
 function AssignmentControlButtons() {
   return (
@@ -25,6 +27,23 @@ function AssignmentControlButtons() {
 }
 
 export default function Assignments() {
+  const { cid } = useParams();
+  const courseAssignments = assignments.filter((a) => a.course === cid);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const dateStr = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const timeStr = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${dateStr} at ${timeStr}`;
+  };
+
   return (
     <div id="wd-assignments">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -76,63 +95,31 @@ export default function Assignments() {
             <span className="float-end me-2">40% of Total</span>
           </div>
           <ListGroup className="wd-lessons rounded-0">
-            <ListGroupItem className="wd-lesson p-3 ps-1 d-flex align-items-center">
-              <BsGripVertical className="me-2 fs-3" />
-              <LiaBookSolid className="me-3 fs-3 text-success" />
-              <div className="flex-grow-1">
-                <Link
-                  href="/courses/1234/assignments/123"
-                  className="wd-assignment-link text-decoration-none text-dark fw-bold"
-                >
-                  A1 - ENV + HTML
-                </Link>
-                <br />
-                <span className="text-secondary small">
-                  <span className="text-danger">Multiple Modules</span> |{" "}
-                  <b>Not available until</b> May 6 at 12:00am | <b>Due</b> May
-                  13 at 11:59pm | 100 pts
-                </span>
-              </div>
-              <AssignmentControlButtons />
-            </ListGroupItem>
-            <ListGroupItem className="wd-lesson p-3 ps-1 d-flex align-items-center">
-              <BsGripVertical className="me-2 fs-3" />
-              <LiaBookSolid className="me-3 fs-3 text-success" />
-              <div className="flex-grow-1">
-                <Link
-                  href="/courses/1234/assignments/124"
-                  className="wd-assignment-link text-decoration-none text-dark fw-bold"
-                >
-                  A2 - CSS + BOOTSTRAP
-                </Link>
-                <br />
-                <span className="text-secondary small">
-                  <span className="text-danger">Multiple Modules</span> |{" "}
-                  <b>Not available until</b> May 13 at 12:00am | <b>Due</b> May
-                  20 at 11:59pm | 100 pts
-                </span>
-              </div>
-              <AssignmentControlButtons />
-            </ListGroupItem>
-            <ListGroupItem className="wd-lesson p-3 ps-1 d-flex align-items-center">
-              <BsGripVertical className="me-2 fs-3" />
-              <LiaBookSolid className="me-3 fs-3 text-success" />
-              <div className="flex-grow-1">
-                <Link
-                  href="/courses/1234/assignments/125"
-                  className="wd-assignment-link text-decoration-none text-dark fw-bold"
-                >
-                  A3 - JAVASCRIPT + REACT
-                </Link>
-                <br />
-                <span className="text-secondary small">
-                  <span className="text-danger">Multiple Modules</span> |{" "}
-                  <b>Not available until</b> May 20 at 12:00am | <b>Due</b> May
-                  27 at 11:59pm | 100 pts
-                </span>
-              </div>
-              <AssignmentControlButtons />
-            </ListGroupItem>
+            {courseAssignments.map((assignment) => (
+              <ListGroupItem
+                key={assignment._id}
+                className="wd-lesson p-3 ps-1 d-flex align-items-center"
+              >
+                <BsGripVertical className="me-2 fs-3" />
+                <LiaBookSolid className="me-3 fs-3 text-success" />
+                <div className="flex-grow-1">
+                  <Link
+                    href={`/courses/${cid}/assignments/${assignment._id}`}
+                    className="wd-assignment-link text-decoration-none text-dark fw-bold"
+                  >
+                    {assignment.title}
+                  </Link>
+                  <br />
+                  <span className="text-secondary small">
+                    <span className="text-danger">Multiple Modules</span> |{" "}
+                    <b>Not available until</b>{" "}
+                    {formatDate(assignment.availableFrom)} | <b>Due</b>{" "}
+                    {formatDate(assignment.dueDate)} | {assignment.points} pts
+                  </span>
+                </div>
+                <AssignmentControlButtons />
+              </ListGroupItem>
+            ))}
           </ListGroup>
         </ListGroupItem>
       </ListGroup>

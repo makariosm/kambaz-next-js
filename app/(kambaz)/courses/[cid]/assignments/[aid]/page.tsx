@@ -1,3 +1,6 @@
+"use client";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
   Button,
   Col,
@@ -7,13 +10,21 @@ import {
   FormSelect,
   Row,
 } from "react-bootstrap";
+import { assignments } from "../../../../database";
 
 export default function AssignmentEditor() {
+  const { cid, aid } = useParams();
+  const assignment = assignments.find((a) => a._id === aid);
+
+  if (!assignment) {
+    return <div>Assignment not found</div>;
+  }
+
   return (
     <div id="wd-assignments-editor">
       <div className="mb-3">
         <FormLabel htmlFor="wd-name">Assignment Name</FormLabel>
-        <FormControl id="wd-name" defaultValue="A1 - ENV + HTML" />
+        <FormControl id="wd-name" defaultValue={assignment.title} />
       </div>
 
       <div className="mb-3">
@@ -21,7 +32,7 @@ export default function AssignmentEditor() {
           as="textarea"
           id="wd-description"
           rows={6}
-          defaultValue="The assignment is available online. Submit a link to the landing page of your Web application running on Netlify. The landing page should include the following: Your full name and section Links to each of the lab assignments Link to the Kanbas application Links to all relevant source code repositories The Kanbas application should include a link to navigate back to the landing page."
+          defaultValue={assignment.description}
         />
       </div>
 
@@ -30,7 +41,7 @@ export default function AssignmentEditor() {
           Points
         </FormLabel>
         <Col sm={9}>
-          <FormControl type="number" id="wd-points" defaultValue={100} />
+          <FormControl type="number" id="wd-points" defaultValue={assignment.points} />
         </Col>
       </Row>
 
@@ -119,7 +130,7 @@ export default function AssignmentEditor() {
             <FormControl
               type="datetime-local"
               id="wd-due-date"
-              defaultValue="2024-05-13T23:59"
+              defaultValue={assignment.dueDate}
               className="mb-3"
             />
 
@@ -129,7 +140,7 @@ export default function AssignmentEditor() {
                 <FormControl
                   type="datetime-local"
                   id="wd-available-from"
-                  defaultValue="2024-05-06T00:00"
+                  defaultValue={assignment.availableFrom}
                 />
               </Col>
               <Col sm={6}>
@@ -137,7 +148,7 @@ export default function AssignmentEditor() {
                 <FormControl
                   type="datetime-local"
                   id="wd-available-until"
-                  defaultValue="2024-05-20T23:59"
+                  defaultValue={assignment.availableUntil}
                 />
               </Col>
             </Row>
@@ -148,12 +159,16 @@ export default function AssignmentEditor() {
       <hr />
 
       <div className="d-flex justify-content-end">
-        <Button variant="secondary" size="lg" className="me-2">
-          Cancel
-        </Button>
-        <Button variant="danger" size="lg">
-          Save
-        </Button>
+        <Link href={`/courses/${cid}/assignments`}>
+          <Button variant="secondary" size="lg" className="me-2">
+            Cancel
+          </Button>
+        </Link>
+        <Link href={`/courses/${cid}/assignments`}>
+          <Button variant="danger" size="lg">
+            Save
+          </Button>
+        </Link>
       </div>
     </div>
   );
