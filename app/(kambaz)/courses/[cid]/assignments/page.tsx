@@ -1,12 +1,14 @@
 "use client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
 import {
   Button,
   FormControl,
   InputGroup,
   ListGroup,
   ListGroupItem,
+  Modal,
 } from "react-bootstrap";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import { FaPlus } from "react-icons/fa6";
@@ -15,9 +17,12 @@ import { IoEllipsisVertical } from "react-icons/io5";
 import { FaSearch } from "react-icons/fa";
 import { LiaBookSolid } from "react-icons/lia";
 import GreenCheckmark from "../modules/GreenCheckmark";
-import { assignments } from "../../../database";
+import AssignmentControlButtons from "./AssignmentControlButtons";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../../../store";
+import { deleteAssignment } from "../../assignments/reducer";
 
-function AssignmentControlButtons() {
+function AssignmentGroupControlButtons() {
   return (
     <div className="float-end">
       <GreenCheckmark />
@@ -28,9 +33,41 @@ function AssignmentControlButtons() {
 
 export default function Assignments() {
   const { cid } = useParams();
-  const courseAssignments = assignments.filter((a) => a.course === cid);
+  const dispatch = useDispatch();
+  const { assignments } = useSelector(
+    (state: RootState) => state.assignmentsReducer,
+  );
+  const { currentUser } = useSelector(
+    (state: RootState) => state.accountReducer,
+  );
+  const courseAssignments = assignments.filter((a: any) => a.course === cid);
+  const isFaculty = currentUser && currentUser.role != "STUDENT";
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(
+    null,
+  );
+
+  const handleDeleteClick = (assignmentId: string) => {
+    setAssignmentToDelete(assignmentId);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (assignmentToDelete) {
+      dispatch(deleteAssignment(assignmentToDelete));
+      setShowDeleteDialog(false);
+      setAssignmentToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false);
+    setAssignmentToDelete(null);
+  };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     const dateStr = date.toLocaleDateString("en-US", {
       month: "short",
@@ -57,25 +94,31 @@ export default function Assignments() {
           />
         </InputGroup>
         <div className="text-nowrap">
-          <Button
-            variant="secondary"
-            size="lg"
-            className="me-2"
-            id="wd-add-assignment-group"
-          >
-            <FaPlus
-              className="position-relative me-2"
-              style={{ bottom: "1px" }}
-            />
-            Group
-          </Button>
-          <Button variant="danger" size="lg" id="wd-add-assignment">
-            <FaPlus
-              className="position-relative me-2"
-              style={{ bottom: "1px" }}
-            />
-            Assignment
-          </Button>
+          {isFaculty && (
+            <>
+              <Button
+                variant="secondary"
+                size="lg"
+                className="me-2"
+                id="wd-add-assignment-group"
+              >
+                <FaPlus
+                  className="position-relative me-2"
+                  style={{ bottom: "1px" }}
+                />
+                Group
+              </Button>
+              <Link href={`/courses/${cid}/assignments/new`}>
+                <Button variant="danger" size="lg" id="wd-add-assignment">
+                  <FaPlus
+                    className="position-relative me-2"
+                    style={{ bottom: "1px" }}
+                  />
+                  Assignment
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -87,7 +130,7 @@ export default function Assignments() {
           <div className="wd-title p-3 ps-2 bg-secondary">
             <BsGripVertical className="me-2 fs-3" />
             ASSIGNMENTS
-            <AssignmentControlButtons />
+            <AssignmentGroupControlButtons />
             <FaPlus
               className="float-end me-3 fs-5 position-relative"
               style={{ top: "3px" }}
@@ -117,12 +160,34 @@ export default function Assignments() {
                     {formatDate(assignment.dueDate)} | {assignment.points} pts
                   </span>
                 </div>
-                <AssignmentControlButtons />
+                {isFaculty && (
+                  <AssignmentControlButtons
+                    assignmentId={assignment._id}
+                    deleteAssignment={handleDeleteClick}
+                  />
+                )}
               </ListGroupItem>
             ))}
           </ListGroup>
         </ListGroupItem>
       </ListGroup>
+
+      <Modal show={showDeleteDialog} onHide={handleCancelDelete}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete Assignment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to remove this assignment?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelDelete}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
