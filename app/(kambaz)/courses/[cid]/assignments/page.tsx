@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   FormControl,
@@ -20,7 +20,8 @@ import GreenCheckmark from "../modules/GreenCheckmark";
 import AssignmentControlButtons from "./AssignmentControlButtons";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../store";
-import { deleteAssignment } from "../../assignments/reducer";
+import * as assignmentsClient from "../../assignments/client";
+import { setAssignments } from "../../assignments/reducer";
 
 function AssignmentGroupControlButtons() {
   return (
@@ -48,14 +49,26 @@ export default function Assignments() {
     null,
   );
 
+  const fetchAssignments = async () => {
+    const fetchedAssignments = await assignmentsClient.findAssignmentsForCourse(
+      cid as string,
+    );
+    dispatch(setAssignments(fetchedAssignments));
+  };
+
+  useEffect(() => {
+    fetchAssignments();
+  }, [cid]);
+
   const handleDeleteClick = (assignmentId: string) => {
     setAssignmentToDelete(assignmentId);
     setShowDeleteDialog(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (assignmentToDelete) {
-      dispatch(deleteAssignment(assignmentToDelete));
+      await assignmentsClient.deleteAssignment(assignmentToDelete);
+      await fetchAssignments();
       setShowDeleteDialog(false);
       setAssignmentToDelete(null);
     }

@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+import * as client from "../courses/client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -13,9 +14,10 @@ import {
   FormControl,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { addNewCourse, deleteCourse, updateCourse } from "../courses/reducer";
-import { enrollCourse, unenrollCourse } from "../enrollments/reducer";
+import { setCourses } from "../courses/reducer";
+import { setEnrollments } from "../enrollments/reducer";
 import { RootState } from "../store";
+import * as enrollmentsClient from "../enrollments/client";
 
 export default function Dashboard() {
   const { courses } = useSelector((state: RootState) => state.coursesReducer);
@@ -36,16 +38,44 @@ export default function Dashboard() {
     image: "/images/reactjs.jpg",
     description: "New Description",
   });
+  const fetchCourses = async () => {
+    try {
+      const courses = showAllCourses
+        ? await client.fetchAllCourses()
+        : await client.findMyCourses();
+      dispatch(setCourses(courses));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const fetchEnrollments = async () => {
+    try {
+      const enrollments = await enrollmentsClient.findMyEnrollments();
+      dispatch(setEnrollments(enrollments));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+    fetchCourses();
+    fetchEnrollments();
+  }, [currentUser, showAllCourses]);
 
   const isFaculty = currentUser?.role != "STUDENT";
   const userId = currentUser?._id;
 
-  const isEnrolled = useCallback((courseId: string) =>
+  const isEnrolled = (courseId: string) =>
     enrollments.some(
-      (enrollment) => enrollment.user === userId && enrollment.course === courseId,
-    ), [enrollments, userId]);
+      (enrollment) =>
+        enrollment.user === userId && enrollment.course === courseId,
+    );
 
-  const visibleCourses = useMemo(() => {
+  const visibleCourses = (() => {
     if (!currentUser) {
       return [];
     }
@@ -53,7 +83,45 @@ export default function Dashboard() {
       return courses;
     }
     return courses.filter((course) => isEnrolled(course._id));
-  }, [courses, currentUser, showAllCourses, isEnrolled]);
+  })();
+  const onAddNewCourse = async () => {
+    const newCourse = await client.createCourse(course);
+    dispatch(setCourses([...courses, newCourse]));
+  };
+  const onDeleteCourse = async (courseId: string) => {
+    await client.deleteCourse(courseId);
+    dispatch(setCourses(courses.filter((course) => course._id !== courseId)));
+  };
+
+  const onEnroll = async (courseId: string) => {
+    await enrollmentsClient.enrollIntoCourse(courseId);
+    await fetchEnrollments();
+    if (!showAllCourses) {
+      await fetchCourses();
+    }
+  };
+
+  const onUnenroll = async (courseId: string) => {
+    await enrollmentsClient.unenrollFromCourse(courseId);
+    await fetchEnrollments();
+    if (!showAllCourses) {
+      await fetchCourses();
+    }
+  };
+  const onUpdateCourse = async () => {
+    await client.updateCourse(course);
+    dispatch(
+      setCourses(
+        courses.map((c) => {
+          if (c._id === course._id) {
+            return course;
+          } else {
+            return c;
+          }
+        }),
+      ),
+    );
+  };
 
   return (
     <div id="wd-dashboard">
@@ -75,14 +143,14 @@ export default function Dashboard() {
             <button
               className="btn btn-primary float-end"
               id="wd-add-new-course-click"
-              onClick={() => dispatch(addNewCourse(course))}
+              onClick={onAddNewCourse}
             >
               {" "}
               Add{" "}
             </button>
             <button
               className="btn btn-warning float-end me-2"
-              onClick={() => dispatch(updateCourse(course))}
+              onClick={onUpdateCourse}
               id="wd-update-course-click"
             >
               Update{" "}
@@ -143,14 +211,10 @@ export default function Dashboard() {
                       {userId &&
                         (isEnrolled(course._id) ? (
                           <button
-                            onClick={(event) => {
+                            onClick={async (event) => {
                               event.preventDefault();
-                              dispatch(
-                                unenrollCourse({
-                                  userId,
-                                  courseId: course._id,
-                                }),
-                              );
+                              event.stopPropagation();
+                              await onUnenroll(course._id);
                             }}
                             className="btn btn-danger float-end"
                           >
@@ -158,11 +222,10 @@ export default function Dashboard() {
                           </button>
                         ) : (
                           <button
-                            onClick={(event) => {
+                            onClick={async (event) => {
                               event.preventDefault();
-                              dispatch(
-                                enrollCourse({ userId, courseId: course._id }),
-                              );
+                              event.stopPropagation();
+                              await onEnroll(course._id);
                             }}
                             className="btn btn-success float-end"
                           >
@@ -174,7 +237,7 @@ export default function Dashboard() {
                           <button
                             onClick={(event) => {
                               event.preventDefault();
-                              dispatch(deleteCourse(course._id));
+                              onDeleteCourse(course._id);
                             }}
                             className="btn btn-danger float-end me-2"
                             id="wd-delete-course-click"

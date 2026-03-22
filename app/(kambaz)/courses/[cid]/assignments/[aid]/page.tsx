@@ -1,7 +1,7 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Col,
@@ -11,61 +11,57 @@ import {
   FormSelect,
   Row,
 } from "react-bootstrap";
-import { useSelector, useDispatch } from "react-redux";
-import { addAssignment, updateAssignment } from "../../../assignments/reducer";
+import { useSelector } from "react-redux";
 import { RootState } from "../../../../store";
+import * as assignmentsClient from "../../../assignments/client";
 
 export default function AssignmentEditor() {
   const { cid, aid } = useParams();
   const router = useRouter();
-  const dispatch = useDispatch();
-  const { assignments } = useSelector(
-    (state: RootState) => state.assignmentsReducer,
-  );
   const { currentUser } = useSelector(
     (state: RootState) => state.accountReducer,
   );
-  const assignment = assignments.find((a: any) => a._id === aid);
   const isFaculty = currentUser && currentUser?.role != "STUDENT";
 
   const isNew = aid == "new";
 
-  const [formData, setFormData] = useState(
-    assignment
-      ? {
-          title: assignment.title,
-          description: assignment.description,
-          points: assignment.points,
-          dueDate: assignment.dueDate,
-          availableFrom: assignment.availableFrom,
-          availableUntil: assignment.availableUntil,
-        }
-      : {
-          title: "",
-          description: "",
-          points: 0,
-          dueDate: "",
-          availableFrom: "",
-          availableUntil: "",
-        },
-  );
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    points: 0,
+    dueDate: "",
+    availableFrom: "",
+    availableUntil: "",
+  });
 
-  const handleSave = () => {
+  useEffect(() => {
+    const loadAssignment = async () => {
+      if (isNew) return;
+      const assignment = await assignmentsClient.findAssignmentById(aid as string);
+      setFormData({
+        title: assignment.title || "",
+        description: assignment.description || "",
+        points: assignment.points || 0,
+        dueDate: assignment.dueDate || "",
+        availableFrom: assignment.availableFrom || "",
+        availableUntil: assignment.availableUntil || "",
+      });
+    };
+    loadAssignment();
+  }, [aid, isNew]);
+
+  const handleSave = async () => {
     if (isNew) {
-      dispatch(
-        addAssignment({
-          ...formData,
-          course: cid,
-        }),
-      );
+      await assignmentsClient.createAssignmentForCourse(cid as string, {
+        ...formData,
+        course: cid,
+      });
     } else {
-      dispatch(
-        updateAssignment({
-          _id: aid,
-          ...formData,
-          course: cid,
-        }),
-      );
+      await assignmentsClient.updateAssignment({
+        _id: aid,
+        ...formData,
+        course: cid,
+      });
     }
     router.push(`/courses/${cid}/assignments`);
   };
