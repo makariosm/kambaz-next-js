@@ -82,7 +82,7 @@ export default function Dashboard() {
     if (showAllCourses) {
       return courses;
     }
-    return courses.filter((course) => isEnrolled(course._id));
+    return courses.filter((course) => course && isEnrolled(course._id));
   })();
   const onAddNewCourse = async () => {
     const newCourse = await client.createCourse(course);
@@ -94,7 +94,7 @@ export default function Dashboard() {
   };
 
   const onEnroll = async (courseId: string) => {
-    await enrollmentsClient.enrollIntoCourse(courseId);
+    await client.enrollIntoCourse("current", courseId);
     await fetchEnrollments();
     if (!showAllCourses) {
       await fetchCourses();
@@ -102,7 +102,7 @@ export default function Dashboard() {
   };
 
   const onUnenroll = async (courseId: string) => {
-    await enrollmentsClient.unenrollFromCourse(courseId);
+    await client.unenrollFromCourse("current", courseId);
     await fetchEnrollments();
     if (!showAllCourses) {
       await fetchCourses();
